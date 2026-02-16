@@ -32,6 +32,22 @@ pub struct CreateIssueParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct UpdateIssueParams {
+    #[schemars(description = "Issue key (e.g. PROJ-123)")]
+    pub issue_key: String,
+    #[schemars(description = "New summary/title")]
+    pub summary: Option<String>,
+    #[schemars(description = "New description in plain text (will be converted to ADF)")]
+    pub description: Option<String>,
+    #[schemars(description = "Assignee account ID (use 'none' to unassign)")]
+    pub assignee: Option<String>,
+    #[schemars(description = "Priority name (e.g. High, Medium, Low)")]
+    pub priority: Option<String>,
+    #[schemars(description = "Custom fields as JSON object (e.g. {\"customfield_10001\": \"value\"})")]
+    pub custom_fields: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct TransitionIssueParams {
     #[schemars(description = "Issue key (e.g. PROJ-123)")]
     pub issue_key: String,

@@ -162,6 +162,31 @@ impl JiraServer {
         }
     }
 
+    #[tool(description = "Update a JIRA issue (summary, description, assignee, priority, custom fields)")]
+    async fn jira_update_issue(
+        &self,
+        Parameters(params): Parameters<UpdateIssueParams>,
+    ) -> Result<CallToolResult, McpError> {
+        match self
+            .client
+            .update_issue(
+                &params.issue_key,
+                params.summary.as_deref(),
+                params.description.as_deref(),
+                params.assignee.as_deref(),
+                params.priority.as_deref(),
+                params.custom_fields.as_ref(),
+            )
+            .await
+        {
+            Ok(()) => {
+                let text = format!("Issue {} updated successfully", params.issue_key);
+                Ok(CallToolResult::success(vec![Content::text(text)]))
+            }
+            Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
+        }
+    }
+
     #[tool(description = "Transition a JIRA issue to a new status (use jira_get_issue to see available transitions)")]
     async fn jira_transition_issue(
         &self,

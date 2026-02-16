@@ -117,6 +117,63 @@ impl JiraClient {
         Ok(resp.json().await?)
     }
 
+    pub async fn update_issue(
+        &self,
+        issue_key: &str,
+        summary: Option<&str>,
+        description: Option<&str>,
+        assignee: Option<&str>,
+        priority: Option<&str>,
+        custom_fields: Option<&serde_json::Value>,
+    ) -> Result<(), McpApiError> {
+        let url = format!("{}/rest/api/3/issue/{}", self.base_url, issue_key);
+
+        let mut fields = serde_json::json!({});
+
+        if let Some(s) = summary {
+            fields["summary"] = serde_json::Value::String(s.to_string());
+        }
+        if let Some(desc) = description {
+            fields["description"] = text_to_adf(desc);
+        }
+        if let Some(a) = assignee {
+            if a == "none" {
+                fields["assignee"] = serde_json::Value::Null;
+            } else {
+                fields["assignee"] = serde_json::json!({"accountId": a});
+            }
+        }
+        if let Some(p) = priority {
+            fields["priority"] = serde_json::json!({"name": p});
+        }
+        if let Some(custom) = custom_fields {
+            if let Some(obj) = custom.as_object() {
+                for (k, v) in obj {
+                    fields[k] = v.clone();
+                }
+            }
+        }
+
+        let body = serde_json::json!({ "fields": fields });
+
+        let resp = self
+            .client
+            .put(&url)
+            .header("Authorization", &self.auth_header)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(McpApiError::Api { status, body });
+        }
+        Ok(())
+    }
+
     pub async fn get_transitions(
         &self,
         issue_key: &str,
