@@ -15,10 +15,14 @@ pub struct CreatePrParams {
     pub head: String,
     #[schemars(description = "Branch to merge into (e.g. main)")]
     pub base: String,
-    #[schemars(description = "PR description/body (markdown)")]
+    #[schemars(description = "PR description/body (markdown), appended after the resolves line")]
     pub body: Option<String>,
     #[schemars(description = "Create as draft PR")]
     pub draft: Option<bool>,
+    #[schemars(description = "GitHub issue number to resolve (prepends 'resolves #N' to body)")]
+    pub issue_number: Option<u64>,
+    #[schemars(description = "JIRA issue key (e.g. BA-1234), shown alongside the resolves line")]
+    pub jira_key: Option<String>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]

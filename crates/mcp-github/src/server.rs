@@ -23,11 +23,16 @@ impl GitHubServer {
         }
     }
 
-    #[tool(description = "Create a new GitHub pull request")]
+    #[tool(description = "Create a new GitHub pull request. If issue_number/jira_key are provided, 'resolves #N (JIRA_KEY)' is prepended to the body.")]
     async fn github_create_pr(
         &self,
         Parameters(params): Parameters<CreatePrParams>,
     ) -> Result<CallToolResult, McpError> {
+        let body = build_pr_body(
+            params.body.as_deref(),
+            params.issue_number,
+            params.jira_key.as_deref(),
+        );
         match self
             .client
             .create_pr(
@@ -36,7 +41,7 @@ impl GitHubServer {
                 &params.title,
                 &params.head,
                 &params.base,
-                params.body.as_deref(),
+                body.as_deref(),
                 params.draft,
             )
             .await
@@ -147,6 +152,26 @@ impl GitHubServer {
             }
             Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
         }
+    }
+}
+
+fn build_pr_body(
+    body: Option<&str>,
+    issue_number: Option<u64>,
+    jira_key: Option<&str>,
+) -> Option<String> {
+    let resolves_line = match (issue_number, jira_key) {
+        (Some(num), Some(key)) => Some(format!("resolves #{} ({})", num, key)),
+        (Some(num), None) => Some(format!("resolves #{}", num)),
+        (None, Some(key)) => Some(format!("resolves {}", key)),
+        (None, None) => None,
+    };
+
+    match (resolves_line, body) {
+        (Some(line), Some(b)) => Some(format!("{}\n\n{}", line, b)),
+        (Some(line), None) => Some(line),
+        (None, Some(b)) => Some(b.to_string()),
+        (None, None) => None,
     }
 }
 
