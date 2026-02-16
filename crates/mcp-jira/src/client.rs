@@ -26,7 +26,7 @@ impl JiraClient {
         jql: &str,
         max_results: u32,
     ) -> Result<JiraSearchResponse, McpApiError> {
-        let url = format!("{}/rest/api/3/search", self.base_url);
+        let url = format!("{}/rest/api/3/search/jql", self.base_url);
         let resp = self
             .client
             .get(&url)
