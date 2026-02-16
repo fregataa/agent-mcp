@@ -12,14 +12,16 @@ use crate::types::*;
 #[derive(Clone)]
 pub struct JiraServer {
     client: std::sync::Arc<JiraClient>,
+    my_account_id: Option<String>,
     tool_router: ToolRouter<Self>,
 }
 
 #[tool_router]
 impl JiraServer {
-    pub fn new(client: JiraClient) -> Self {
+    pub fn new(client: JiraClient, my_account_id: Option<String>) -> Self {
         Self {
             client: std::sync::Arc::new(client),
+            my_account_id,
             tool_router: Self::tool_router(),
         }
     }
@@ -162,18 +164,25 @@ impl JiraServer {
         }
     }
 
-    #[tool(description = "Update a JIRA issue (summary, description, assignee, priority, custom fields)")]
+    #[tool(description = "Update a JIRA issue (summary, description, assignee, priority, custom fields). Use 'me' as assignee to assign to the configured user, 'none' to unassign.")]
     async fn jira_update_issue(
         &self,
         Parameters(params): Parameters<UpdateIssueParams>,
     ) -> Result<CallToolResult, McpError> {
+        let assignee = params.assignee.as_deref().map(|a| {
+            if a == "me" {
+                self.my_account_id.as_deref().unwrap_or(a)
+            } else {
+                a
+            }
+        });
         match self
             .client
             .update_issue(
                 &params.issue_key,
                 params.summary.as_deref(),
                 params.description.as_deref(),
-                params.assignee.as_deref(),
+                assignee,
                 params.priority.as_deref(),
                 params.custom_fields.as_ref(),
             )
@@ -181,6 +190,44 @@ impl JiraServer {
         {
             Ok(()) => {
                 let text = format!("Issue {} updated successfully", params.issue_key);
+                Ok(CallToolResult::success(vec![Content::text(text)]))
+            }
+            Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
+        }
+    }
+
+    #[tool(description = "Search for JIRA users by name or email to get their account ID (needed for assignee)")]
+    async fn jira_find_user(
+        &self,
+        Parameters(params): Parameters<FindUserParams>,
+    ) -> Result<CallToolResult, McpError> {
+        match self.client.find_user(&params.query).await {
+            Ok(users) => {
+                if users.is_empty() {
+                    return Ok(CallToolResult::success(vec![Content::text(
+                        "No users found",
+                    )]));
+                }
+                let mut text = format!("Found {} user(s):\n\n", users.len());
+                for user in &users {
+                    let name = user.display_name.as_deref().unwrap_or("(unknown)");
+                    let email = user
+                        .email_address
+                        .as_deref()
+                        .unwrap_or("(no email)");
+                    let active = if user.active.unwrap_or(true) {
+                        "active"
+                    } else {
+                        "inactive"
+                    };
+                    text.push_str(&format!(
+                        "- {} <{}> [{}]\n  Account ID: {}\n",
+                        name, email, active, user.account_id
+                    ));
+                }
+                if let Some(ref my_id) = self.my_account_id {
+                    text.push_str(&format!("\nNote: Your configured account ID is: {}", my_id));
+                }
                 Ok(CallToolResult::success(vec![Content::text(text)]))
             }
             Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),

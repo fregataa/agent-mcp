@@ -48,6 +48,12 @@ pub struct UpdateIssueParams {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+pub struct FindUserParams {
+    #[schemars(description = "Search query (name or email address)")]
+    pub query: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct TransitionIssueParams {
     #[schemars(description = "Issue key (e.g. PROJ-123)")]
     pub issue_key: String,
@@ -156,4 +162,16 @@ pub struct JiraComment {
     pub body: Option<serde_json::Value>,
     pub created: Option<String>,
     pub updated: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct JiraUserSearchResult {
+    #[serde(rename = "accountId")]
+    pub account_id: String,
+    #[serde(rename = "displayName")]
+    pub display_name: Option<String>,
+    #[serde(rename = "emailAddress")]
+    pub email_address: Option<String>,
+    pub active: Option<bool>,
 }

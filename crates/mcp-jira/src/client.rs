@@ -283,4 +283,26 @@ impl JiraClient {
         }
         Ok(resp.json().await?)
     }
+
+    pub async fn find_user(
+        &self,
+        query: &str,
+    ) -> Result<Vec<JiraUserSearchResult>, McpApiError> {
+        let url = format!("{}/rest/api/3/user/search", self.base_url);
+        let resp = self
+            .client
+            .get(&url)
+            .header("Authorization", &self.auth_header)
+            .header("Accept", "application/json")
+            .query(&[("query", query)])
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(McpApiError::Api { status, body });
+        }
+        Ok(resp.json().await?)
+    }
 }

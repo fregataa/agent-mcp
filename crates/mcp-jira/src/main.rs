@@ -29,8 +29,10 @@ async fn main() -> Result<()> {
         bail!("JIRA_API_TOKEN is empty");
     }
 
+    let my_account_id = std::env::var("JIRA_MY_ACCOUNT_ID").ok().filter(|s| !s.is_empty());
+
     let client = JiraClient::new(base_url, email, api_token);
-    let server = JiraServer::new(client);
+    let server = JiraServer::new(client, my_account_id);
 
     tracing::info!("Starting JIRA MCP server on stdio");
 
