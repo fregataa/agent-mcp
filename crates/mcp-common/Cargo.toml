@@ -1,0 +1,9 @@
+[package]
+name = "mcp-common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
