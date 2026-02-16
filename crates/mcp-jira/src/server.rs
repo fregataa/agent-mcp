@@ -147,6 +147,7 @@ impl JiraServer {
                 &params.issue_type,
                 &params.summary,
                 params.description.as_deref(),
+                params.custom_fields.as_ref(),
             )
             .await
         {

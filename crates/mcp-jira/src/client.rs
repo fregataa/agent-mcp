@@ -75,6 +75,7 @@ impl JiraClient {
         issue_type: &str,
         summary: &str,
         description: Option<&str>,
+        custom_fields: Option<&serde_json::Value>,
     ) -> Result<JiraCreateResponse, McpApiError> {
         let url = format!("{}/rest/api/3/issue", self.base_url);
 
@@ -86,6 +87,14 @@ impl JiraClient {
 
         if let Some(desc) = description {
             fields["description"] = text_to_adf(desc);
+        }
+
+        if let Some(custom) = custom_fields {
+            if let Some(obj) = custom.as_object() {
+                for (k, v) in obj {
+                    fields[k] = v.clone();
+                }
+            }
         }
 
         let body = serde_json::json!({ "fields": fields });
