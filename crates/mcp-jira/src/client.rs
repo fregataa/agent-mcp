@@ -12,6 +12,23 @@ pub struct JiraClient {
 }
 
 impl JiraClient {
+    /// Parse response body using bytes() to avoid reqwest charset decoding issues,
+    /// then deserialize with serde_json for better error messages.
+    async fn parse_response<T: serde::de::DeserializeOwned>(
+        resp: reqwest::Response,
+    ) -> Result<T, McpApiError> {
+        let bytes = resp.bytes().await?;
+        let body = String::from_utf8_lossy(&bytes);
+        serde_json::from_str(&body).map_err(|e| {
+            tracing::error!("Failed to deserialize response: {}", e);
+            tracing::error!("Raw response body: {}", body);
+            McpApiError::Deserialize {
+                message: e.to_string(),
+                body: body.into_owned(),
+            }
+        })
+    }
+
     pub fn new(base_url: String, email: String, api_token: String) -> Self {
         let auth = BASE64.encode(format!("{}:{}", email, api_token));
         Self {
@@ -48,16 +65,7 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        let body = resp.text().await?;
-        tracing::debug!("JIRA search raw response: {}", body);
-        serde_json::from_str(&body).map_err(|e| {
-            tracing::error!("Failed to deserialize JIRA search response: {}", e);
-            tracing::error!("Raw response body: {}", body);
-            McpApiError::Deserialize {
-                message: e.to_string(),
-                body,
-            }
-        })
+        Self::parse_response(resp).await
     }
 
     pub async fn get_issue(&self, issue_key: &str) -> Result<JiraIssue, McpApiError> {
@@ -75,7 +83,7 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        Self::parse_response(resp).await
     }
 
     pub async fn create_issue(
@@ -123,7 +131,7 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        Self::parse_response(resp).await
     }
 
     pub async fn update_issue(
@@ -204,7 +212,7 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        Self::parse_response(resp).await
     }
 
     pub async fn transition_issue(
@@ -266,7 +274,7 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        Self::parse_response(resp).await
     }
 
     pub async fn list_comments(
@@ -290,7 +298,7 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        Self::parse_response(resp).await
     }
 
     pub async fn find_user(
@@ -312,6 +320,6 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        Self::parse_response(resp).await
     }
 }
