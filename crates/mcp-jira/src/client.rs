@@ -48,7 +48,16 @@ impl JiraClient {
             let body = resp.text().await.unwrap_or_default();
             return Err(McpApiError::Api { status, body });
         }
-        Ok(resp.json().await?)
+        let body = resp.text().await?;
+        tracing::debug!("JIRA search raw response: {}", body);
+        serde_json::from_str(&body).map_err(|e| {
+            tracing::error!("Failed to deserialize JIRA search response: {}", e);
+            tracing::error!("Raw response body: {}", body);
+            McpApiError::Deserialize {
+                message: e.to_string(),
+                body,
+            }
+        })
     }
 
     pub async fn get_issue(&self, issue_key: &str) -> Result<JiraIssue, McpApiError> {

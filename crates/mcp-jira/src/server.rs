@@ -34,9 +34,13 @@ impl JiraServer {
         let max_results = params.max_results.unwrap_or(20).min(50);
         match self.client.search_issues(&params.jql, max_results).await {
             Ok(result) => {
+                let total_str = result
+                    .total
+                    .map(|t| t.to_string())
+                    .unwrap_or_else(|| format!("{}+", result.issues.len()));
                 let mut text = format!(
                     "Found {} issues (showing up to {}):\n\n",
-                    result.total, max_results
+                    total_str, max_results
                 );
                 for issue in &result.issues {
                     let status = issue

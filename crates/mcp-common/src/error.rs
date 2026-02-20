@@ -8,6 +8,9 @@ pub enum McpApiError {
     #[error("API error ({status}): {body}")]
     Api { status: u16, body: String },
 
+    #[error("Failed to deserialize response: {message}\nBody: {body}")]
+    Deserialize { message: String, body: String },
+
     #[error("Missing environment variable: {0}")]
     MissingEnv(String),
 }

@@ -78,9 +78,12 @@ pub struct ListCommentsParams {
 // --- JIRA API response types ---
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 pub struct JiraSearchResponse {
     pub issues: Vec<JiraIssue>,
-    pub total: u32,
+    pub total: Option<u32>,
+    #[serde(rename = "isLast")]
+    pub is_last: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
