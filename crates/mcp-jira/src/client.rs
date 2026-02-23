@@ -92,6 +92,7 @@ impl JiraClient {
         issue_type: &str,
         summary: &str,
         description: Option<&str>,
+        parent: Option<&str>,
         custom_fields: Option<&serde_json::Value>,
     ) -> Result<JiraCreateResponse, McpApiError> {
         let url = format!("{}/rest/api/3/issue", self.base_url);
@@ -104,6 +105,10 @@ impl JiraClient {
 
         if let Some(desc) = description {
             fields["description"] = text_to_adf(desc);
+        }
+
+        if let Some(parent_key) = parent {
+            fields["parent"] = serde_json::json!({"key": parent_key});
         }
 
         if let Some(custom) = custom_fields {

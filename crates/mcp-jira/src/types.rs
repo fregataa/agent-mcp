@@ -27,6 +27,8 @@ pub struct CreateIssueParams {
     pub summary: String,
     #[schemars(description = "Issue description in plain text (will be converted to ADF)")]
     pub description: Option<String>,
+    #[schemars(description = "Parent issue key for sub-tasks or children of epics (e.g. PROJ-123)")]
+    pub parent: Option<String>,
     #[schemars(description = "Custom fields as JSON object (e.g. {\"customfield_10001\": \"value\", \"customfield_10002\": {\"id\": \"10100\"}})")]
     pub custom_fields: Option<serde_json::Value>,
 }
