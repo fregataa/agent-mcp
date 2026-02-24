@@ -4,44 +4,6 @@ use serde::{Deserialize, Serialize};
 // --- Tool parameter types ---
 
 #[derive(Debug, Deserialize, JsonSchema)]
-pub struct CreatePrParams {
-    #[schemars(description = "Repository owner (user or organization)")]
-    pub owner: String,
-    #[schemars(description = "Repository name")]
-    pub repo: String,
-    #[schemars(description = "PR title")]
-    pub title: String,
-    #[schemars(description = "Branch containing changes")]
-    pub head: String,
-    #[schemars(description = "Branch to merge into (e.g. main)")]
-    pub base: String,
-    #[schemars(description = "PR description/body (markdown), appended after the resolves line")]
-    pub body: Option<String>,
-    #[schemars(description = "Create as draft PR")]
-    pub draft: Option<bool>,
-    #[schemars(description = "GitHub issue number to resolve (prepends 'resolves #N' to body)")]
-    pub issue_number: Option<u64>,
-    #[schemars(description = "JIRA issue key (e.g. BA-1234), shown alongside the resolves line")]
-    pub jira_key: Option<String>,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct UpdatePrParams {
-    #[schemars(description = "Repository owner")]
-    pub owner: String,
-    #[schemars(description = "Repository name")]
-    pub repo: String,
-    #[schemars(description = "PR number")]
-    pub pull_number: u64,
-    #[schemars(description = "New PR title")]
-    pub title: Option<String>,
-    #[schemars(description = "New PR body (markdown)")]
-    pub body: Option<String>,
-    #[schemars(description = "New state: open or closed")]
-    pub state: Option<String>,
-}
-
-#[derive(Debug, Deserialize, JsonSchema)]
 pub struct GetPrParams {
     #[schemars(description = "Repository owner")]
     pub owner: String,

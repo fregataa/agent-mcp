@@ -23,72 +23,6 @@ impl GitHubServer {
         }
     }
 
-    #[tool(description = "Create a new GitHub pull request. If issue_number/jira_key are provided, 'resolves #N (JIRA_KEY)' is prepended to the body.")]
-    async fn github_create_pr(
-        &self,
-        Parameters(params): Parameters<CreatePrParams>,
-    ) -> Result<CallToolResult, McpError> {
-        let body = build_pr_body(
-            params.body.as_deref(),
-            params.issue_number,
-            params.jira_key.as_deref(),
-        );
-        match self
-            .client
-            .create_pr(
-                &params.owner,
-                &params.repo,
-                &params.title,
-                &params.head,
-                &params.base,
-                body.as_deref(),
-                params.draft,
-            )
-            .await
-        {
-            Ok(pr) => {
-                let text = format!(
-                    "PR created successfully!\nNumber: #{}\nTitle: {}\nURL: {}\nState: {}\nDraft: {}",
-                    pr.number,
-                    pr.title,
-                    pr.html_url,
-                    pr.state,
-                    pr.draft.unwrap_or(false)
-                );
-                Ok(CallToolResult::success(vec![Content::text(text)]))
-            }
-            Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
-        }
-    }
-
-    #[tool(description = "Update an existing GitHub pull request (title, body, or state)")]
-    async fn github_update_pr(
-        &self,
-        Parameters(params): Parameters<UpdatePrParams>,
-    ) -> Result<CallToolResult, McpError> {
-        match self
-            .client
-            .update_pr(
-                &params.owner,
-                &params.repo,
-                params.pull_number,
-                params.title.as_deref(),
-                params.body.as_deref(),
-                params.state.as_deref(),
-            )
-            .await
-        {
-            Ok(pr) => {
-                let text = format!(
-                    "PR updated successfully!\nNumber: #{}\nTitle: {}\nURL: {}\nState: {}",
-                    pr.number, pr.title, pr.html_url, pr.state
-                );
-                Ok(CallToolResult::success(vec![Content::text(text)]))
-            }
-            Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
-        }
-    }
-
     #[tool(description = "Get detailed information about a GitHub pull request")]
     async fn github_get_pr(
         &self,
@@ -155,32 +89,12 @@ impl GitHubServer {
     }
 }
 
-fn build_pr_body(
-    body: Option<&str>,
-    issue_number: Option<u64>,
-    jira_key: Option<&str>,
-) -> Option<String> {
-    let resolves_line = match (issue_number, jira_key) {
-        (Some(num), Some(key)) => Some(format!("resolves #{} ({})", num, key)),
-        (Some(num), None) => Some(format!("resolves #{}", num)),
-        (None, Some(key)) => Some(format!("resolves {}", key)),
-        (None, None) => None,
-    };
-
-    match (resolves_line, body) {
-        (Some(line), Some(b)) => Some(format!("{}\n\n{}", line, b)),
-        (Some(line), None) => Some(line),
-        (None, Some(b)) => Some(b.to_string()),
-        (None, None) => None,
-    }
-}
-
 #[tool_handler]
 impl ServerHandler for GitHubServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(
-                "GitHub MCP server providing tools for creating, updating, and viewing pull requests."
+                "GitHub MCP server providing tools for viewing pull requests."
                     .to_string(),
             ),
             capabilities: ServerCapabilities::builder().enable_tools().build(),
