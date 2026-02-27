@@ -327,4 +327,61 @@ impl JiraClient {
         }
         Self::parse_response(resp).await
     }
+
+    pub async fn link_issues(
+        &self,
+        link_type: &str,
+        inward_issue: &str,
+        outward_issue: &str,
+        comment: Option<&str>,
+    ) -> Result<(), McpApiError> {
+        let url = format!("{}/rest/api/3/issueLink", self.base_url);
+
+        let mut body = serde_json::json!({
+            "type": { "name": link_type },
+            "inwardIssue": { "key": inward_issue },
+            "outwardIssue": { "key": outward_issue },
+        });
+
+        if let Some(text) = comment {
+            body["comment"] = serde_json::json!({
+                "body": text_to_adf(text)
+            });
+        }
+
+        let resp = self
+            .client
+            .post(&url)
+            .header("Authorization", &self.auth_header)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(McpApiError::Api { status, body });
+        }
+        Ok(())
+    }
+
+    pub async fn list_link_types(&self) -> Result<JiraIssueLinkTypesResponse, McpApiError> {
+        let url = format!("{}/rest/api/3/issueLinkType", self.base_url);
+        let resp = self
+            .client
+            .get(&url)
+            .header("Authorization", &self.auth_header)
+            .header("Accept", "application/json")
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(McpApiError::Api { status, body });
+        }
+        Self::parse_response(resp).await
+    }
 }

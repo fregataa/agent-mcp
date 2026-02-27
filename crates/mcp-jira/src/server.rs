@@ -314,6 +314,51 @@ impl JiraServer {
             Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
         }
     }
+    #[tool(description = "Link two JIRA issues together (e.g. Blocks, Relates, Duplicates). Use jira_list_link_types to see available link types.")]
+    async fn jira_link_issues(
+        &self,
+        Parameters(params): Parameters<LinkIssuesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        match self
+            .client
+            .link_issues(
+                &params.link_type,
+                &params.inward_issue,
+                &params.outward_issue,
+                params.comment.as_deref(),
+            )
+            .await
+        {
+            Ok(()) => {
+                let text = format!(
+                    "Issues linked successfully: {} -[{}]-> {}",
+                    params.inward_issue, params.link_type, params.outward_issue
+                );
+                Ok(CallToolResult::success(vec![Content::text(text)]))
+            }
+            Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
+        }
+    }
+
+    #[tool(description = "List all available issue link types (e.g. Blocks, Relates, Duplicates)")]
+    async fn jira_list_link_types(&self) -> Result<CallToolResult, McpError> {
+        match self.client.list_link_types().await {
+            Ok(result) => {
+                let mut text = format!(
+                    "Available issue link types ({}):\n\n",
+                    result.issue_link_types.len()
+                );
+                for lt in &result.issue_link_types {
+                    text.push_str(&format!(
+                        "- {} (id: {})\n  Inward: \"{}\"\n  Outward: \"{}\"\n",
+                        lt.name, lt.id, lt.inward, lt.outward
+                    ));
+                }
+                Ok(CallToolResult::success(vec![Content::text(text)]))
+            }
+            Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None)),
+        }
+    }
 }
 
 #[tool_handler]

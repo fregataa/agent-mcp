@@ -77,6 +77,18 @@ pub struct ListCommentsParams {
     pub issue_key: String,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct LinkIssuesParams {
+    #[schemars(description = "Link type name (e.g. \"Blocks\", \"Relates\", \"Duplicates\")")]
+    pub link_type: String,
+    #[schemars(description = "Inward issue key (e.g. PROJ-1)")]
+    pub inward_issue: String,
+    #[schemars(description = "Outward issue key (e.g. PROJ-2)")]
+    pub outward_issue: String,
+    #[schemars(description = "Optional comment in plain text")]
+    pub comment: Option<String>,
+}
+
 // --- JIRA API response types ---
 
 #[derive(Debug, Deserialize)]
@@ -179,4 +191,18 @@ pub struct JiraUserSearchResult {
     #[serde(rename = "emailAddress")]
     pub email_address: Option<String>,
     pub active: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JiraIssueLinkTypesResponse {
+    #[serde(rename = "issueLinkTypes")]
+    pub issue_link_types: Vec<JiraIssueLinkType>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct JiraIssueLinkType {
+    pub id: String,
+    pub name: String,
+    pub inward: String,
+    pub outward: String,
 }
