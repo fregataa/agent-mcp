@@ -13,6 +13,26 @@ pub struct GetPrParams {
     pub pull_number: u64,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ListPrReviewsParams {
+    #[schemars(description = "Repository owner")]
+    pub owner: String,
+    #[schemars(description = "Repository name")]
+    pub repo: String,
+    #[schemars(description = "PR number")]
+    pub pull_number: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ListPrCommentsParams {
+    #[schemars(description = "Repository owner")]
+    pub owner: String,
+    #[schemars(description = "Repository name")]
+    pub repo: String,
+    #[schemars(description = "PR number")]
+    pub pull_number: u64,
+}
+
 // --- GitHub API response types ---
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -45,4 +65,30 @@ pub struct GitHubRef {
     #[serde(rename = "ref")]
     pub ref_name: Option<String>,
     pub sha: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct GitHubReview {
+    pub id: u64,
+    pub user: Option<GitHubUser>,
+    pub state: String,
+    pub body: Option<String>,
+    pub submitted_at: Option<String>,
+    pub html_url: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[allow(dead_code)]
+pub struct GitHubReviewComment {
+    pub id: u64,
+    pub user: Option<GitHubUser>,
+    pub body: Option<String>,
+    pub path: Option<String>,
+    pub line: Option<u64>,
+    pub original_line: Option<u64>,
+    pub diff_hunk: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub html_url: Option<String>,
 }

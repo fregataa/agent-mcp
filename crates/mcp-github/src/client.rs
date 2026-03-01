@@ -49,4 +49,50 @@ impl GitHubClient {
         }
         Ok(resp.json().await?)
     }
+
+    pub async fn list_pr_reviews(
+        &self,
+        owner: &str,
+        repo: &str,
+        pull_number: u64,
+    ) -> Result<Vec<GitHubReview>, McpApiError> {
+        let url = self.api_url(&format!(
+            "/repos/{}/{}/pulls/{}/reviews",
+            owner, repo, pull_number
+        ));
+        let resp = self
+            .add_headers(self.client.get(&url))
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(McpApiError::Api { status, body });
+        }
+        Ok(resp.json().await?)
+    }
+
+    pub async fn list_pr_comments(
+        &self,
+        owner: &str,
+        repo: &str,
+        pull_number: u64,
+    ) -> Result<Vec<GitHubReviewComment>, McpApiError> {
+        let url = self.api_url(&format!(
+            "/repos/{}/{}/pulls/{}/comments",
+            owner, repo, pull_number
+        ));
+        let resp = self
+            .add_headers(self.client.get(&url))
+            .send()
+            .await?;
+
+        if !resp.status().is_success() {
+            let status = resp.status().as_u16();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(McpApiError::Api { status, body });
+        }
+        Ok(resp.json().await?)
+    }
 }

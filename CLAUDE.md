@@ -24,24 +24,63 @@ Three crates in `crates/`:
 
 - **mcp-common** — Shared `McpApiError` enum (in `error.rs`) and `build_client()` HTTP client factory (in `http.rs`). All API errors flow through `McpApiError` which has variants for request failures, API errors (with status/body), deserialization errors, and missing env vars.
 
-- **mcp-jira** — JIRA MCP server. `JiraClient` wraps JIRA REST API v3 with Basic Auth (base64 email:token). `JiraServer` exposes tools via rmcp's `#[tool_router]`/`#[tool]` macros. `adf.rs` handles Atlassian Document Format conversion (plain text <-> ADF).
+- **mcp-jira** — JIRA MCP server. `JiraClient` wraps JIRA REST API v3 with Basic Auth (base64 email:token). `JiraServer` exposes tools via rmcp macros. `adf.rs` handles Atlassian Document Format conversion (plain text <-> ADF).
 
 - **mcp-github** — GitHub MCP server. `GitHubClient` wraps GitHub REST API with Bearer token auth. `GitHubServer` exposes PR management tools.
 
-### Key Pattern: Tool Definition
+### Adding a New Tool
 
-Tools are defined as async methods on the server struct using rmcp macros:
+Three files must be modified in each server crate — always in this order:
+
+1. **`types.rs`** — Add parameter struct (derives `Deserialize`, `JsonSchema`) and any new API response types. Each field needs `#[schemars(description = "...")]`.
+
+2. **`client.rs`** — Add async method on the client struct that calls the external API, handles HTTP errors, and returns `Result<T, McpApiError>`.
+
+3. **`server.rs`** — Add `#[tool(description = "...")]` method on the server struct that calls the client method, formats output as text, and returns `Result<CallToolResult, McpError>`.
+
+### rmcp Macro Stack
+
+Each server struct uses three macro layers:
 
 ```rust
-#[tool(description = "...")]
-async fn tool_name(&self, Parameters(params): Parameters<ParamType>) -> Result<CallToolResult, McpError> { ... }
+#[tool_router]           // On impl block: generates tool routing logic
+impl MyServer {
+    #[tool(description = "...")] // On each method: registers it as an MCP tool
+    async fn my_tool(&self, Parameters(params): Parameters<MyParams>) -> Result<CallToolResult, McpError> { ... }
+}
+
+#[tool_handler]          // On ServerHandler impl: wires routing into MCP protocol
+impl ServerHandler for MyServer { ... }
 ```
 
-Parameter types derive `JsonSchema` with `#[schemars(description = "...")]` for field descriptions. The schema is auto-generated at compile time.
+Tool names exposed to MCP clients are the snake_case method names (e.g., `jira_search_issues`).
 
-### Server Initialization
+### Error Handling Flow
 
-Each binary follows the same pattern: init tracing -> load/validate env vars -> create client -> create server -> serve on stdio. Logs go to stderr to avoid interfering with the MCP protocol on stdout.
+Client methods return `Result<T, McpApiError>`. Server tool methods convert errors for MCP:
+
+```rust
+Err(e) => Err(McpError::internal_error(e.to_mcp_error(), None))
+```
+
+where `to_mcp_error()` returns `self.to_string()` (via thiserror Display).
+
+### Response Construction
+
+All tools return formatted text:
+
+```rust
+Ok(CallToolResult::success(vec![Content::text(formatted_string)]))
+```
+
+### Key Implementation Details
+
+- **Arc-wrapped clients**: Server structs hold `Arc<Client>` for thread-safe sharing across async tasks.
+- **JIRA response parsing**: `JiraClient` uses `bytes()` → `String::from_utf8_lossy()` → `serde_json::from_str()` instead of direct `.json()` to avoid reqwest's charset auto-detection corrupting JIRA responses.
+- **ADF conversion** (`adf.rs`): `text_to_adf()` converts plain text to Atlassian Document Format JSON for creating/updating issues and comments. `adf_to_text()` recursively walks ADF JSON to extract readable text.
+- **"me" assignee**: JIRA server resolves the magic string `"me"` to `JIRA_MY_ACCOUNT_ID` env var for assignee fields.
+- **Eager transition fetching**: `jira_get_issue()` automatically includes available transitions in output.
+- **Logs to stderr**: All tracing output goes to stderr; stdout is reserved for MCP stdio protocol.
 
 ## Environment Variables
 
